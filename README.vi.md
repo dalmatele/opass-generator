@@ -108,7 +108,7 @@ Có thể nối output trực tiếp đến Hashcat ở chế độ stdin:
   --min-len 8 \
   --max-len 16 \
   --session omen.session |
-hashcat -m <hash-mode> hashes.txt --stdin
+hashcat -m <hash-mode> -a 0 hashes.txt
 ```
 
 Thay `<hash-mode>` bằng mode phù hợp với định dạng hash của bạn. Tránh ghi

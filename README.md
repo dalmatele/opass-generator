@@ -112,7 +112,7 @@ Pipe candidate output directly to Hashcat in stdin mode:
   --min-len 8 \
   --max-len 16 \
   --session omen.session |
-hashcat -m <hash-mode> hashes.txt --stdin
+hashcat -m <hash-mode> -a 0 hashes.txt
 ```
 
 Replace `<hash-mode>` with the mode matching your hash format. Prefer piping
