@@ -1141,6 +1141,12 @@ int main(int argc, char **argv) {
             level = score_start;
             for (;;) {
                 size_t first_ip = resume_current_score ? resume_ip_index : 0;
+                fprintf(stderr,
+                        "\rlength=%zu level=%zu (range %zu-%zu) "
+                        "IP.line=%" PRIu32 " candidates=%" PRIu64,
+                        length, level, level_min, level_max,
+                        ip.entries[first_ip].line, session.candidates);
+                fflush(stderr);
                 session.current_level = level;
                 for (ip_index = first_ip; ip_index < ip.count; ip_index++) {
                     const IpEntry *entry = &ip.entries[ip_index];

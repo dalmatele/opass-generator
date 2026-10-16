@@ -128,7 +128,10 @@ Options:
 
 Candidates are written to `stdout`; progress and errors go to `stderr`.
 Candidates are ordered by ascending total OMEN level within each password
-length.
+length. As a result, reaching the end of `IP.level` returns to its first record
+for the next total level; the password length increases only after every level
+for the current length has been processed. Progress displays the current
+length, level, and starting IP line for each pass.
 
 ## Use with Hashcat
 

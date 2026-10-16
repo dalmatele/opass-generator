@@ -123,7 +123,10 @@ Các tuỳ chọn:
 
 Generator phát candidate qua `stdout`; thông tin tiến độ/lỗi được ghi ra
 `stderr`. Mỗi độ dài được duyệt theo tổng OMEN level tăng dần. Thứ tự này
-được áp dụng riêng trong từng độ dài.
+được áp dụng riêng trong từng độ dài. Vì vậy, khi duyệt hết `IP.level`, dòng
+IP sẽ quay lại đầu file ở tổng level tiếp theo; độ dài chỉ tăng sau khi hoàn
+tất tất cả level của độ dài hiện tại. Tiến độ hiển thị `length`, `level` và
+dòng IP bắt đầu của lượt đang chạy.
 
 ## Dùng với Hashcat
 
