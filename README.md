@@ -16,8 +16,38 @@ Output can be redirected to a file or piped directly to another program.
 - An OMEN model containing `IP.level`, `CP.level`, and a `config.txt` with an
   `ngram` setting.
 
-The Makefile uses POSIX APIs. On native Windows, use a compatible environment
-such as MSYS2 or Cygwin.
+The generator supports native Windows builds with MinGW-w64 as well as
+POSIX-compatible environments such as MSYS2 MSYS and Cygwin.
+
+### Windows build with MSYS2
+
+1. Install MSYS2 from [msys2.org](https://www.msys2.org/).
+2. Open the **MSYS2 MINGW64** terminal.
+3. Update MSYS2:
+
+   ```sh
+   pacman -Syu
+   ```
+
+   Follow any instruction to close and reopen the terminal, then install GNU
+   Make and the MINGW64 MinGW-w64 compiler:
+
+   ```sh
+   pacman -S --needed base-devel mingw-w64-x86_64-gcc
+   ```
+
+4. In the MINGW64 terminal, change to the project directory and build:
+
+   ```sh
+   cd /e/Projects/github/opass-generator
+   make
+   ```
+
+   Replace the path with the location where you cloned the project. The build
+   creates `omen-generator.exe` and `omen-level-check.exe`. With a
+   MinGW-w64 compiler, these are native Windows executables and do not require
+   the MSYS2 runtime. If MinGW and GNU Make are already on `PATH`, you can run
+   `make` from that environment instead.
 
 ## Build
 
@@ -124,7 +154,8 @@ on disk.
 Sessions are enabled by default. The generator creates or updates
 `omen.session`. A checkpoint stores model fingerprints, length limits, the
 current password length, IP line, and total OMEN level. It is written to a
-temporary file and renamed to reduce the risk of a partial checkpoint.
+temporary file and replaces the previous checkpoint to reduce the risk of a
+partial checkpoint.
 
 Checkpoints are updated about every five seconds and when a new password
 length starts. Stop the generator with `Ctrl+C` or `SIGTERM` to request a

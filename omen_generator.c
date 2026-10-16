@@ -27,6 +27,13 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <io.h>
+#define fdopen _fdopen
+#define fsync _commit
+#endif
 
 #define MAX_NGRAM 64
 #define DEFAULT_SESSION "omen.session"
@@ -563,6 +570,17 @@ static int parse_size(const char *text, size_t *value) {
     return 1;
 }
 
+static int parse_unsigned_long_long(const char *text, int base,
+                                    unsigned long long *value) {
+    char *end;
+    unsigned long long parsed;
+    errno = 0;
+    parsed = strtoull(text, &end, base);
+    if (errno != 0 || end == text || *end != '\0') return 0;
+    *value = parsed;
+    return 1;
+}
+
 static int read_session(Session *session, size_t ngram_min_len) {
     FILE *fp = fopen(session->path, "r");
     char line[256];
@@ -590,21 +608,29 @@ static int read_session(Session *session, size_t ngram_min_len) {
         char value[128];
         if (sscanf(line, "%63[^=]=%127s", key, value) != 2) continue;
         if (strcmp(key, "ip_hash") == 0)
-            fields |= sscanf(value, "%llx", &ip_hash) == 1 ? 1U << 0 : 0;
+            fields |= parse_unsigned_long_long(value, 16, &ip_hash)
+                          ? 1U << 0 : 0;
         else if (strcmp(key, "cp_hash") == 0)
-            fields |= sscanf(value, "%llx", &cp_hash) == 1 ? 1U << 1 : 0;
+            fields |= parse_unsigned_long_long(value, 16, &cp_hash)
+                          ? 1U << 1 : 0;
         else if (strcmp(key, "config_hash") == 0)
-            fields |= sscanf(value, "%llx", &config_hash) == 1 ? 1U << 2 : 0;
+            fields |= parse_unsigned_long_long(value, 16, &config_hash)
+                          ? 1U << 2 : 0;
         else if (strcmp(key, "min_len") == 0)
-            fields |= sscanf(value, "%llu", &min_len) == 1 ? 1U << 3 : 0;
+            fields |= parse_unsigned_long_long(value, 10, &min_len)
+                          ? 1U << 3 : 0;
         else if (strcmp(key, "max_len") == 0)
-            fields |= sscanf(value, "%llu", &max_len) == 1 ? 1U << 4 : 0;
+            fields |= parse_unsigned_long_long(value, 10, &max_len)
+                          ? 1U << 4 : 0;
         else if (strcmp(key, "length") == 0)
-            fields |= sscanf(value, "%llu", &current_len) == 1 ? 1U << 5 : 0;
+            fields |= parse_unsigned_long_long(value, 10, &current_len)
+                          ? 1U << 5 : 0;
         else if (strcmp(key, "level") == 0)
-            fields |= sscanf(value, "%llu", &current_level) == 1 ? 1U << 6 : 0;
+            fields |= parse_unsigned_long_long(value, 10, &current_level)
+                          ? 1U << 6 : 0;
         else if (strcmp(key, "ip_line") == 0)
-            fields |= sscanf(value, "%llu", &current_line) == 1 ? 1U << 7 : 0;
+            fields |= parse_unsigned_long_long(value, 10, &current_line)
+                          ? 1U << 7 : 0;
         else if (strcmp(key, "complete") == 0)
             fields |= sscanf(value, "%u", &complete) == 1 ? 1U << 8 : 0;
     }
@@ -671,6 +697,9 @@ static int save_session(Session *session, int complete) {
     int fd;
     FILE *fp;
     int ok = 1;
+#ifdef _WIN32
+    DWORD replace_error = ERROR_SUCCESS;
+#endif
 
     if (!session->enabled) return 1;
     temp_len = strlen(session->path) + sizeof(".tmp.XXXXXX");
@@ -713,8 +742,36 @@ static int save_session(Session *session, int complete) {
         fflush(fp) != 0 || fsync(fd) != 0)
         ok = 0;
     if (fclose(fp) != 0) ok = 0;
-    if (ok && rename(temp_path, session->path) != 0) ok = 0;
+    if (ok) {
+#ifdef _WIN32
+        if (!MoveFileExA(temp_path, session->path,
+                         MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) {
+            replace_error = GetLastError();
+            ok = 0;
+        }
+#else
+        if (rename(temp_path, session->path) != 0) ok = 0;
+#endif
+    }
     if (!ok) {
+#ifdef _WIN32
+        if (replace_error != ERROR_SUCCESS) {
+            char error_message[256];
+            DWORD message_length = FormatMessageA(
+                FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+                NULL, replace_error, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                error_message, (DWORD)sizeof(error_message), NULL);
+            if (message_length != 0)
+                fprintf(stderr,
+                        "ERROR: failed replacing session '%s': %s",
+                        session->path, error_message);
+            else
+                fprintf(stderr,
+                        "ERROR: failed replacing session '%s' "
+                        "(Windows error %lu)\n",
+                        session->path, (unsigned long)replace_error);
+        } else
+#endif
         fprintf(stderr, "ERROR: failed writing session '%s': %s\n",
                 session->path, strerror(errno));
         unlink(temp_path);
@@ -884,7 +941,9 @@ int main(int argc, char **argv) {
     size_t *next = NULL;
     size_t *end = NULL;
     size_t *path_levels = NULL;
+#ifndef _WIN32
     struct sigaction action;
+#endif
 
     for (i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--ip") == 0 && i + 1 < argc)
@@ -1002,16 +1061,23 @@ int main(int argc, char **argv) {
     sort_cp_file = &cp.file;
     qsort(cp.entries, cp.count, sizeof(*cp.entries), compare_cp);
 
+#ifdef _WIN32
+    if (signal(SIGINT, handle_signal) == SIG_ERR ||
+        signal(SIGTERM, handle_signal) == SIG_ERR) {
+#else
     memset(&action, 0, sizeof(action));
     action.sa_handler = handle_signal;
     sigemptyset(&action.sa_mask);
     if (sigaction(SIGINT, &action, NULL) != 0 ||
         sigaction(SIGTERM, &action, NULL) != 0) {
+#endif
         fprintf(stderr, "ERROR: cannot install signal handlers: %s\n",
                 strerror(errno));
         goto cleanup;
     }
+#ifdef SIGPIPE
     (void)signal(SIGPIPE, SIG_IGN);
+#endif
     if (setvbuf(stdout, NULL, _IOFBF, OUTPUT_BUFFER_SIZE) != 0) {
         fprintf(stderr, "WARNING: using default stdout buffering\n");
     }
