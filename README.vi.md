@@ -193,6 +193,7 @@ Tốc độ tham khảo với Hashcat mode `32500`:
 |---|---:|
 | NVIDIA GeForce RTX 2060 6 GB | 250K candidate/giây |
 | MacBook Pro 15-inch (2019) | 30K candidate/giây |
+| NVIDIA Tesla T4 | 215K candidates/giây |
 
 Đây là số liệu ghi nhận trên các cấu hình nêu trên; tốc độ thực tế có thể
 thay đổi tùy model, thiết lập và cấu hình hệ thống.

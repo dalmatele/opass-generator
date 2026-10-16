@@ -198,6 +198,7 @@ Reference throughput with Hashcat mode `32500`:
 |---|---:|
 | NVIDIA GeForce RTX 2060 6 GB | 250K candidates/second |
 | MacBook Pro 15-inch (2019) | 30K candidates/second |
+| NVIDIA Tesla T4 | 215K candidates/second |
 
 These are observed results on the listed systems; actual throughput may vary
 with the model, settings, and system configuration.
