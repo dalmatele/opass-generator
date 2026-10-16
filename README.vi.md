@@ -187,6 +187,16 @@ wordlist hoàn chỉnh rồi quản lý offset riêng; stdin pipeline không cun
 
 ## Tốc độ và bộ nhớ
 
+Tốc độ tham khảo với Hashcat mode `32500`:
+
+| Phần cứng | Tốc độ |
+|---|---:|
+| NVIDIA GeForce RTX 2060 6 GB | 250K candidate/giây |
+| MacBook Pro 15-inch (2019) | 30K candidate/giây |
+
+Đây là số liệu ghi nhận trên các cấu hình nêu trên; tốc độ thực tế có thể
+thay đổi tùy model, thiết lập và cấu hình hệ thống.
+
 Generator nạp model và chỉ mục vào RAM một lần, nhưng không giữ tất cả
 candidate trong bộ nhớ. Candidate được stream ra ngay. Buffer tạm tỷ lệ với
 độ dài đang sinh; đặt `--max-len` để giới hạn phạm vi và bộ nhớ tạm. Khi pipe

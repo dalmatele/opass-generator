@@ -192,6 +192,16 @@ that guarantee.
 
 ## Speed and memory
 
+Reference throughput with Hashcat mode `32500`:
+
+| Hardware | Throughput |
+|---|---:|
+| NVIDIA GeForce RTX 2060 6 GB | 250K candidates/second |
+| MacBook Pro 15-inch (2019) | 30K candidates/second |
+
+These are observed results on the listed systems; actual throughput may vary
+with the model, settings, and system configuration.
+
 The generator loads the model and its indexes into memory once, but does not
 keep all generated candidates in RAM. Candidates are streamed as they are
 generated. Temporary buffers scale with the current password length; set
