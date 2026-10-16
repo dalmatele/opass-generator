@@ -13,8 +13,37 @@ nối vào một chương trình khác qua pipe.
 - `make` tương thích POSIX (GNU Make hoặc BSD Make).
 - Model OMEN gồm `IP.level`, `CP.level` và `config.txt` có khai báo `ngram`.
 
-Makefile dùng API POSIX, nên trên Windows native cần môi trường tương thích
-POSIX như MSYS2 hoặc Cygwin.
+Generator hỗ trợ build native trên Windows bằng MinGW-w64, cũng như build
+trong các môi trường tương thích POSIX như MSYS2 MSYS và Cygwin.
+
+### Build trên Windows bằng MSYS2
+
+1. Cài MSYS2 từ [msys2.org](https://www.msys2.org/).
+2. Mở terminal **MSYS2 MINGW64**.
+3. Cập nhật MSYS2:
+
+   ```sh
+   pacman -Syu
+   ```
+
+   Nếu được yêu cầu đóng và mở lại terminal, hãy làm theo hướng dẫn rồi cài
+   GNU Make và compiler MinGW-w64 cho MINGW64:
+
+   ```sh
+   pacman -S --needed base-devel mingw-w64-x86_64-gcc
+   ```
+
+4. Trong terminal MINGW64, chuyển đến thư mục dự án và build:
+
+   ```sh
+   cd /e/Projects/github/opass-generator
+   make
+   ```
+
+   Thay đường dẫn bằng vị trí bạn đã clone dự án. Build tạo ra
+   `omen-generator.exe` và `omen-level-check.exe`. Khi build bằng MinGW-w64,
+   đây là executable Windows native và không cần MSYS2 runtime. Nếu MinGW và
+   GNU Make đã có trong `PATH`, bạn cũng có thể chạy `make` từ môi trường đó.
 
 ## Build
 
@@ -119,8 +148,8 @@ trên đĩa.
 
 Khi bật session (mặc định), generator tạo hoặc cập nhật file `omen.session`.
 Checkpoint lưu model fingerprint, giới hạn độ dài, độ dài hiện tại, IP line
-và tổng OMEN level. File được ghi qua file tạm rồi rename để giảm nguy cơ
-checkpoint dở dang.
+và tổng OMEN level. File được ghi qua file tạm rồi thay checkpoint cũ để giảm
+nguy cơ checkpoint dở dang.
 
 Checkpoint được cập nhật định kỳ khoảng 5 giây và khi bắt đầu độ dài mới.
 Dừng generator bằng `Ctrl+C` hoặc `SIGTERM` để yêu cầu lưu trạng thái trước
@@ -157,6 +186,17 @@ wordlist hoàn chỉnh rồi quản lý offset riêng; stdin pipeline không cun
 đảm bảo đó.
 
 ## Tốc độ và bộ nhớ
+
+Tốc độ tham khảo với Hashcat mode `32500`:
+
+| Phần cứng | Tốc độ |
+|---|---:|
+| NVIDIA GeForce RTX 2060 6 GB | 250K candidate/giây |
+| MacBook Pro 15-inch (2019) | 30K candidate/giây |
+| NVIDIA Tesla T4 | 215K candidates/giây |
+
+Đây là số liệu ghi nhận trên các cấu hình nêu trên; tốc độ thực tế có thể
+thay đổi tùy model, thiết lập và cấu hình hệ thống.
 
 Generator nạp model và chỉ mục vào RAM một lần, nhưng không giữ tất cả
 candidate trong bộ nhớ. Candidate được stream ra ngay. Buffer tạm tỷ lệ với
