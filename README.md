@@ -149,6 +149,19 @@ Replace `<hash-mode>` with the mode matching your hash format. Prefer piping
 when you do not need a candidate file; this avoids storing the full wordlist
 on disk.
 
+### Windows shell recommendation
+
+For large candidate streams on Windows, prefer `cmd.exe` or an MSYS2 terminal.
+Windows PowerShell may use substantial memory with native-to-native pipelines.
+Run this example from the project directory in `cmd.exe`:
+
+```cmd
+omen-generator.exe --ip data\IP.level --cp data\CP.level --config data\config.txt --min-len 13 --max-len 13 | D:\path\to\hashcat.exe -a 0 -m 32500 hash.txt
+```
+
+Adjust the Hashcat path and hash mode as needed. Set `--max-len` to bound
+generation; without it, the generator continues to longer lengths.
+
 ## Sessions and resume
 
 Sessions are enabled by default. The generator creates or updates

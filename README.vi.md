@@ -144,6 +144,20 @@ Thay `<hash-mode>` bằng mode phù hợp với định dạng hash của bạn.
 candidate ra file nếu không cần thiết; pipe giúp không lưu toàn bộ wordlist
 trên đĩa.
 
+### Khuyến nghị shell trên Windows
+
+Khi truyền luồng candidate lớn trên Windows, nên dùng `cmd.exe` hoặc terminal
+MSYS2. Windows PowerShell có thể dùng nhiều RAM với pipeline giữa các chương
+trình native. Chạy ví dụ sau trong `cmd.exe`, tại thư mục dự án:
+
+```cmd
+omen-generator.exe --ip data\IP.level --cp data\CP.level --config data\config.txt --min-len 13 --max-len 13 | D:\path\to\hashcat.exe -a 0 -m 32500 hash.txt
+```
+
+Điều chỉnh đường dẫn Hashcat và hash mode cho phù hợp. Đặt `--max-len` để
+giới hạn độ dài cần sinh; nếu bỏ tùy chọn này, generator sẽ tiếp tục tăng độ
+dài.
+
 ## Session và restore
 
 Khi bật session (mặc định), generator tạo hoặc cập nhật file `omen.session`.
