@@ -116,6 +116,10 @@ Các tuỳ chọn:
   `ngram - 1`; giá trị thấp hơn prefix tối thiểu này được nâng lên.
 - `--max-len N`: độ dài tối đa. Nếu không chỉ định, generator tiếp tục tăng
   độ dài cho đến khi bị dừng.
+- `--minlevel N` (`--min-level N`): tổng OMEN level tối thiểu, bao gồm cả
+  mức được chỉ định. Nếu bỏ qua, không áp dụng giới hạn dưới bổ sung.
+- `--maxlevel N` (`--max-level N`): tổng OMEN level tối đa, bao gồm cả
+  mức được chỉ định. Nếu bỏ qua, không áp dụng giới hạn trên.
 - `--session FILE`: đường dẫn checkpoint; mặc định là `omen.session`.
 - `--no-session`: tắt checkpoint.
 - `--check`: chỉ kiểm tra model, không sinh candidate.

@@ -121,6 +121,10 @@ Options:
   length.
 - `--max-len N`: maximum password length. If omitted, generation continues
   to longer lengths until stopped.
+- `--minlevel N` (`--min-level N`): minimum total OMEN level, inclusive.
+  If omitted, no additional lower bound is applied.
+- `--maxlevel N` (`--max-level N`): maximum total OMEN level, inclusive.
+  If omitted, there is no upper bound.
 - `--session FILE`: checkpoint path; defaults to `omen.session`.
 - `--no-session`: disable checkpointing.
 - `--check`: validate the model without generating candidates.

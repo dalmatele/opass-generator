@@ -83,6 +83,8 @@ typedef struct {
     int complete;
     size_t min_len;
     size_t max_len;
+    size_t min_level;
+    size_t max_level;
     size_t current_len;
     size_t current_level;
     uint32_t current_line;
@@ -587,9 +589,11 @@ static int read_session(Session *session, size_t ngram_min_len) {
     unsigned int version;
     unsigned long long ip_hash = 0, cp_hash = 0, config_hash = 0;
     unsigned long long min_len = 0, max_len = 0, current_len = 0;
+    unsigned long long min_level = 0, max_level = 0;
     unsigned long long current_level = 0, current_line = 0;
     unsigned int complete = 0;
     unsigned int fields = 0;
+    int saw_min_level = 0, saw_max_level = 0;
 
     if (!fp) {
         fprintf(stderr, "ERROR: cannot open session '%s': %s\n",
@@ -622,7 +626,15 @@ static int read_session(Session *session, size_t ngram_min_len) {
         else if (strcmp(key, "max_len") == 0)
             fields |= parse_unsigned_long_long(value, 10, &max_len)
                           ? 1U << 4 : 0;
-        else if (strcmp(key, "length") == 0)
+        else if (strcmp(key, "min_level") == 0) {
+            saw_min_level = 1;
+            fields |= parse_unsigned_long_long(value, 10, &min_level)
+                          ? 1U << 9 : 0;
+        } else if (strcmp(key, "max_level") == 0) {
+            saw_max_level = 1;
+            fields |= parse_unsigned_long_long(value, 10, &max_level)
+                          ? 1U << 10 : 0;
+        } else if (strcmp(key, "length") == 0)
             fields |= parse_unsigned_long_long(value, 10, &current_len)
                           ? 1U << 5 : 0;
         else if (strcmp(key, "level") == 0)
@@ -641,7 +653,11 @@ static int read_session(Session *session, size_t ngram_min_len) {
         return 0;
     }
     fclose(fp);
-    if (fields != (1U << 9) - 1 || complete > 1) {
+    if ((fields & ((1U << 9) - 1)) != (1U << 9) - 1 ||
+        saw_min_level != saw_max_level ||
+        (saw_min_level &&
+         (!(fields & (1U << 9)) || !(fields & (1U << 10)))) ||
+        complete > 1) {
         fprintf(stderr, "ERROR: incomplete session file '%s'\n", session->path);
         return 0;
     }
@@ -654,6 +670,13 @@ static int read_session(Session *session, size_t ngram_min_len) {
     if (min_len != session->min_len || max_len != session->max_len) {
         fprintf(stderr,
                 "ERROR: min/max length options do not match the saved session\n");
+        return 0;
+    }
+    if ((saw_min_level &&
+         (min_level != session->min_level || max_level != session->max_level)) ||
+        (!saw_min_level && (session->min_level || session->max_level))) {
+        fprintf(stderr,
+                "ERROR: min/max level options do not match the saved session\n");
         return 0;
     }
     if (complete) {
@@ -732,13 +755,16 @@ static int save_session(Session *session, int complete) {
                 "config_hash=%016" PRIx64 "\n"
                 "min_len=%zu\n"
                 "max_len=%zu\n"
+                "min_level=%zu\n"
+                "max_level=%zu\n"
                 "ip_line=%" PRIu32 "\n"
                 "length=%zu\n"
                 "level=%zu\n"
                 "complete=%d\n",
                 session->ip_hash, session->cp_hash, session->config_hash,
-                session->min_len, session->max_len, session->current_line,
-                session->current_len, session->current_level, complete) < 0 ||
+                session->min_len, session->max_len, session->min_level,
+                session->max_level, session->current_line, session->current_len,
+                session->current_level, complete) < 0 ||
         fflush(fp) != 0 || fsync(fd) != 0)
         ok = 0;
     if (fclose(fp) != 0) ok = 0;
@@ -904,6 +930,8 @@ static void usage(const char *program) {
         "Options:\n"
         "  --min-len N      Minimum password length in UTF-8 characters\n"
         "  --max-len N      Maximum password length (default: unlimited)\n"
+        "  --minlevel N     Minimum total OMEN level (default: model minimum)\n"
+        "  --maxlevel N     Maximum total OMEN level (default: unlimited)\n"
         "  --session FILE   Checkpoint file (default: %s)\n"
         "  --resume         Resume from the saved checkpoint\n"
         "  --no-session     Disable checkpointing\n"
@@ -923,10 +951,14 @@ int main(int argc, char **argv) {
     int ngram = 0;
     size_t requested_min = 0;
     size_t requested_max = 0;
+    size_t requested_min_level = 0;
+    size_t requested_max_level = 0;
     size_t min_len;
     size_t root_chars;
     int min_set = 0;
     int max_set = 0;
+    int min_level_set = 0;
+    int max_level_set = 0;
     int check_only = 0;
     int no_session = 0;
     int resume = 0;
@@ -964,6 +996,22 @@ int main(int argc, char **argv) {
                 return 2;
             }
             max_set = 1;
+        } else if ((strcmp(argv[i], "--minlevel") == 0 ||
+                    strcmp(argv[i], "--min-level") == 0) &&
+                   i + 1 < argc) {
+            if (!parse_size(argv[++i], &requested_min_level)) {
+                fprintf(stderr, "ERROR: --minlevel must be a positive integer\n");
+                return 2;
+            }
+            min_level_set = 1;
+        } else if ((strcmp(argv[i], "--maxlevel") == 0 ||
+                    strcmp(argv[i], "--max-level") == 0) &&
+                   i + 1 < argc) {
+            if (!parse_size(argv[++i], &requested_max_level)) {
+                fprintf(stderr, "ERROR: --maxlevel must be a positive integer\n");
+                return 2;
+            }
+            max_level_set = 1;
         } else if (strcmp(argv[i], "--session") == 0 && i + 1 < argc)
             session_path = argv[++i];
         else if (strcmp(argv[i], "--resume") == 0)
@@ -982,6 +1030,8 @@ int main(int argc, char **argv) {
     }
     if (!ip_path || !cp_path || !config_path ||
         (min_set && max_set && requested_min > requested_max) ||
+        (min_level_set && max_level_set &&
+         requested_min_level > requested_max_level) ||
         (resume && no_session) || (check_only && resume)) {
         usage(argv[0]);
         return 2;
@@ -1012,6 +1062,8 @@ int main(int argc, char **argv) {
     session.enabled = !no_session;
     session.min_len = min_len;
     session.max_len = max_set ? requested_max : 0;
+    session.min_level = min_level_set ? requested_min_level : 0;
+    session.max_level = max_level_set ? requested_max_level : 0;
     session.ip_hash = ip.file.hash;
     session.cp_hash = cp.file.hash;
     session.config_hash = config_file.hash;
@@ -1140,9 +1192,13 @@ int main(int argc, char **argv) {
             }
             level = score_start;
             for (;;) {
+                if (session.max_level && level > session.max_level) break;
                 size_t first_ip = resume_current_score ? resume_ip_index : 0;
                 session.current_level = level;
-                for (ip_index = first_ip; ip_index < ip.count; ip_index++) {
+                for (ip_index = first_ip;
+                     ip_index < ip.count &&
+                     (!session.min_level || level >= session.min_level);
+                     ip_index++) {
                     const IpEntry *entry = &ip.entries[ip_index];
                     const char *root = ip.file.data + entry->offset;
                     size_t root_bytes = strlen(root);
@@ -1189,7 +1245,9 @@ int main(int argc, char **argv) {
                                 session.candidates);
                 }
                 resume_current_score = 0;
-                if (level == level_max) break;
+                if (level == level_max ||
+                    (session.max_level && level >= session.max_level))
+                    break;
                 level++;
                 session.current_level = level;
                 session.current_line = ip.entries[0].line;
